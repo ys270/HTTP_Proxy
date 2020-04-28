@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+  proxy:
+      build: ./src
+      image: proxy:main
+      command: bash -c "./proxy"
+      volumes:
+        - ./src:/main
+        - ./logs:/var/log/erss
+      ports:
+        - "12345:12345"
+      tty: true

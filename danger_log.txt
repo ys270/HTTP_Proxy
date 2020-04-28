@@ -1,0 +1,19 @@
+Danger Log of the Proxy Server
+
+1. Memeory leak:
+ - We made a good use of RAII to avoid memory leak. All of our classes have a destructor dealing with all the sources allocated by the constructor or other member functions, including closing all the sockets and using the freeaddrinfo function.
+ - For the cache list, it won't delete all malloc'd resources until the main program exits normally. 
+
+2. Exception guarantee:
+ - We catched all the bad_alloc exceptions when trying to allocate any memories.
+ - We handle all the connection failure related problems by throwing a string containing the host name and port.
+ - We handle all the recv() problems by returning an empty string implying that something bad happens. 
+ - The function at the highest level are called handle_get, handle_post and handle_connect. They catch all the exceptions and deal with them properly, thus make a no-throw guarantee. 
+
+3. Cache:
+ - The cache was implemented as an LRU cache using a doubly linked list, whose volume is 500 Cache_Blocks(a self-defined class). Searching through the cache list requires O(n) of time, while inserting and deleting a cache block requires O(1) of time. 
+ - The order of our cache list represents the time order of their insertion. Once a block is hit, it will be poped up to the head of the list, which means it's being recently used. Once the list reaches its maximum capacity, it will discards the last one, which is the least recent used one. Expired caches won't be deleted until it becomes the last one and the cache reaches its limit. 
+
+4. Cache Synchronization:
+ - Since all threads are sharing the same cache, all code segments modifying the structure of the cache list should be considered critical. Accordingly, two out of our three main operations, inserting a new response and updating the 'hit' cache block's position to the head of the list are critical. 
+ - We used a lock_guard to wrap up a mutex, which follows the rule of RAII, to guarantee that only one thread can modify the cache list at the same time. 
